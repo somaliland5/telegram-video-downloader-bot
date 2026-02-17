@@ -6,9 +6,7 @@
 </head>
 
 <body>
-
 <h2>Video Downloader</h2>
-
 <input id="link" placeholder="Paste link">
 <button onclick="download()">Download</button>
 
@@ -16,24 +14,18 @@
 <ul id="history"></ul>
 
 <script>
-
 const tg = window.Telegram.WebApp;
 tg.expand();
-
 let user = tg.initDataUnsafe.user.id;
 
 async function download(){
-
     let link = document.getElementById("link").value;
-
     let res = await fetch("/download", {
         method:"POST",
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({user:user,url:link})
     });
-
     let data = await res.json();
-
     if(data.video){
         window.open(data.video);
         loadHistory();
@@ -41,22 +33,15 @@ async function download(){
 }
 
 async function loadHistory(){
-
     let res = await fetch("/history/"+user);
     let data = await res.json();
-
     let html = "";
-
     data.forEach(v=>{
-        html += `<li><a href="${v}">Video</a></li>`
-    })
-
+        html += `<li><a href="${v}" target="_blank">Video</a></li>`;
+    });
     document.getElementById("history").innerHTML = html;
 }
-
 loadHistory();
-
 </script>
-
 </body>
 </html>
