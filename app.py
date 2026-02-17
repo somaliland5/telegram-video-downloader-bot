@@ -2,41 +2,58 @@ from flask import Flask, request, jsonify, render_template
 import requests
 
 app = Flask(__name__)
+history = {}  # in-memory user download history
 
-history = {}
 
+# ===== WEB PAGE =====
 @app.route("/web")
 def web():
     return render_template("index.html")
 
 
+# ===== DOWNLOAD API =====
 @app.route("/download", methods=["POST"])
 def download():
-
     data = request.json
-    url = data["url"]
-    user = str(data["user"])
+    url = data.get("url")
+    user = str(data.get("user"))
+    if not url or not user:
+        return jsonify({"error": "Missing URL or user"}), 400
 
-    video = None
+    video_url = None
 
-    if "tiktok" in url:
-        res = requests.get(f"https://tikwm.com/api/?url={url}").json()
-        video = res["data"]["play"]
+    # --- TikTok ---
+    if "tiktok.com" in url:
+        try:
+            res = requests.get(f"https://tikwm.com/api/?url={url}", timeout=20).json()
+            video_url = res.get("data", {}).get("play")
+        except:
+            pass
 
-    if "instagram" in url:
-        res = requests.get("https://igram.world/api/convert", params={"url": url}).json()
-        video = res["url"]
+    # --- Instagram ---
+    if "instagram.com" in url:
+        try:
+            # Simple API fallback (replace with real API if needed)
+            res = requests.get("https://igram.world/api/convert", params={"url": url}, timeout=20).json()
+            video_url = res.get("url")
+        except:
+            pass
 
-    if video:
-        history.setdefault(user, []).append(video)
-        return jsonify({"video": video})
+    if not video_url:
+        return jsonify({"error": "Failed to get video"}), 400
 
-    return jsonify({"error": "failed"})
+    # Save history
+    history.setdefault(user, []).append(video_url)
+    return jsonify({"video": video_url})
 
 
+# ===== HISTORY API =====
 @app.route("/history/<uid>")
 def get_history(uid):
     return jsonify(history.get(uid, []))
 
 
-app.run(host="0.0.0.0", port=5000)
+# ===== RUN FLASK =====
+if __name__ == "__main__":
+    # For development only
+    app.run(host="0.0.0.0", port=5000, debug=True)
